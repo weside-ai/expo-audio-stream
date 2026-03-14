@@ -498,13 +498,18 @@ class AudioRecorderManager(
             return null
         }
         
-        // Always use VOICE_COMMUNICATION for better echo cancellation
-        val audioSource = MediaRecorder.AudioSource.VOICE_COMMUNICATION
-        
+        // Use MIC instead of VOICE_COMMUNICATION to avoid silent capture when AudioManager mode is NORMAL.
+        // Echo cancellation is still applied via AudioEffectsManager (AcousticEchoCanceler).
+        val audioSource = MediaRecorder.AudioSource.MIC
+
+        val channelConfig = if (config.channels == 1) AudioFormat.CHANNEL_IN_MONO else AudioFormat.CHANNEL_IN_STEREO
+        val minBufferSize = AudioRecord.getMinBufferSize(config.sampleRate, channelConfig, audioFormat)
+        bufferSizeInBytes = if (minBufferSize > 0) java.lang.Math.max(1024, minBufferSize) else 1024
+
         val record = AudioRecord(
-            audioSource, // Using VOICE_COMMUNICATION for built-in echo cancellation
+            audioSource,
             config.sampleRate,
-            if (config.channels == 1) AudioFormat.CHANNEL_IN_MONO else AudioFormat.CHANNEL_IN_STEREO,
+            channelConfig,
             audioFormat,
             bufferSizeInBytes
         )
